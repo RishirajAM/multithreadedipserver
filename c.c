@@ -29,28 +29,40 @@ int main(int argc, char **argv)
 
 	uint32_t ret = 0;
 	uint32_t reti = 0;
+	uint8_t flag = 1;
+	uint32_t i = 0;
 
-	do
+	while (1)
 	{
-		ret = read(fd, buf, 256);
-		if(ret < 0)
-			perror("Error reading the input file fd:");
-		if(ret == 0)
+		if(flag)
 		{
-			perror("Finished reading the input file fd:");
-			close(fd);
+			ret = read(fd, buf, 256);
+			if(ret < 0)
+				perror("Error reading the input file fd:");
+			if(ret == 0)
+			{
+				perror("Finished reading the input file fd:");
+				flag = 0;
+				close(fd);
+			}
 		}
 
-		reti = write(clientfd, buf, 256);
+		reti = write(clientfd, buf, ret);
 		if(reti < 0)
+		{
 			perror("Error sending the image file fd:");
+			break;
+		}
 		if(reti == 0)
 		{
 			perror("Finished sending the image file fd:");
+			break;
 		}
-		usleep(10000);
-	}while (reti);
-
+		printf("read:%d, write:%d\n", ret, reti);
+		usleep(100);
+		i++;
+	}
+	printf("%d\n", i);
 	sleep(3);
 	Close(clientfd);
 	exit(0);
