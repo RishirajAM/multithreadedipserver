@@ -5,24 +5,17 @@ CFLAGS = -O2 -Wall -I .
 # Others systems will probably require something different.
 LIB = -lpthread
 
-all: s c cgi
+all: s c
 
 c: c.c csapp.o
-	$(CC) $(CFLAGS) -o c c.c csapp.o q.o $(LIB)
+	$(CC) $(CFLAGS) -o c c.c csapp.o $(LIB)
 
-s: s.c csapp.o q.o
-	$(CC) $(CFLAGS) -o s s.c csapp.o q.o $(LIB)
+s: s.c csapp.o
+	$(CC) $(CFLAGS) -o s s.c csapp.o $(LIB)
 
 csapp.o: csapp.c
 	$(CC) $(CFLAGS) -c csapp.c
 
-q.o: q.c
-	$(CC) $(CFLAGS) -c q.c $(LIB)
-
-cgi:
-	(cd cgi-bin; make)
-
 clean:
 	rm -f *.o s c *~
-	(cd cgi-bin; make clean)
 
