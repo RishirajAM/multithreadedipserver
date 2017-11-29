@@ -1,4 +1,5 @@
 #include "csapp.h"
+#include <unistd.h>
 
 int main(int argc, char **argv)
 {
@@ -17,37 +18,40 @@ int main(int argc, char **argv)
 	Rio_readinitb(&rio, clientfd);
 
 	/**/
-	uint32_t fd = open(argv[1], O_RDONLY);
+
+	uint32_t fd = open(argv[3], O_RDONLY);
 	if(fd<0)
 	{
 		perror("Error in opening the input file");
 		return fd;
 	}
+	printf("Input file is : %s [FD:%d]\n", argv[3], fd);
 
 	uint32_t ret = 0;
-	uint32_t fileSize = lseek(fd, 0, SEEK_END);
-	lseek(fd, 0, SEEK_SET);
+	uint32_t reti = 0;
 
-	char *image = calloc(fileSize, sizeof(char));
-	if(image == NULL)
-		perror("Error allocating a buffer for image:");
-
-	ret = read(fd, image, fileSize);
-	if(ret < 0)
-		perror("Error reading the input file:");
-	printf("%d bytes are read from input image file into image buffer\n", ret);
-	/**/
-
-	while (/*Fgets(buf, MAXLINE, stdin) != NULL*/ret)
+	do
 	{
-		printf("before write\n");
-		ret = write(clientfd, image, fileSize);
-		printf("%d bytes sent.\n", ret);
-		//Rio_writen(clientfd, buf, strlen(buf));
-		Rio_readlineb(&rio, buf, MAXLINE);
-		Fputs(buf, stdout);
-	}
+		ret = read(fd, buf, 256);
+		if(ret < 0)
+			perror("Error reading the input file fd:");
+		if(ret == 0)
+		{
+			perror("Finished reading the input file fd:");
+			close(fd);
+		}
 
+		reti = write(clientfd, buf, 256);
+		if(reti < 0)
+			perror("Error sending the image file fd:");
+		if(reti == 0)
+		{
+			perror("Finished sending the image file fd:");
+		}
+		usleep(10000);
+	}while (reti);
+
+	sleep(3);
 	Close(clientfd);
 	exit(0);
 }
