@@ -7,11 +7,8 @@ void echo(int connfd)
 	size_t n;
 	char buf[MAXLINE];
 	rio_t rio;
-	int sum = 0;
 	Rio_readinitb(&rio, connfd);
-	uint32_t i = 0;
 
-	uint32_t ni = 0;
 	fd2 = open("output.jpg", O_WRONLY | O_CREAT , 0666);
 	do
 	{
@@ -34,11 +31,19 @@ void echo(int connfd)
 		execl("/home/rishiraj/Desktop/fall17/EOS/Project/opencvExample/sample", "sample", cgiargs2, NULL);
 		exit(0);
 	}
+	int status;
+    waitpid(-1, &status, 0);
+    printf("waitpid returned %d\n", status);
+    memset(buf, 0, MAXLINE);
+    snprintf(buf, 6, "Hello");
+    n = write(connfd, buf, 6);
+    printf("n is %d\n", (int)n);
 }
 
 int main(int argc, char *argv[])
 {
-	int listenfd, connfd, clientlen;
+	int listenfd, connfd;
+	socklen_t clientlen;
 	struct sockaddr_in clientaddr;
 	if (argc != 2)
 	{

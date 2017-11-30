@@ -28,9 +28,6 @@ int main(int argc, char **argv)
 	}
 	printf("Input file is : %s [FD:%d]\n", argv[3], fd);
 
-	uint32_t fileSize = lseek(fd, 0, SEEK_END);
-	lseek(fd, 0, SEEK_SET);
-
 	while (1)
 	{
 		if(flag)
@@ -58,13 +55,11 @@ int main(int argc, char **argv)
 			perror("Finished sending the image file fd:");
 			break;
 		}
-
-		printf("read:%d, write:%d\n", ret, reti);
 		usleep(100);
 	}
-	/*ret = read(clientfd, buf, MAXLINE);
-	printf("server sent %d\n", buf);*/
-
+	//ret = read(clientfd, buf, MAXLINE);
+	//printf("Server sent : %s\n", buf);
+	sleep(5);
 	Close(clientfd);
 	exit(0);
 }
