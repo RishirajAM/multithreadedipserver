@@ -11,23 +11,29 @@ void echo(int connfd)
 	Rio_readinitb(&rio, connfd);
 	uint32_t i = 0;
 
-	//while((n = Rio_readlineb(&rio, buf, MAXLINE)) != 0)
-	//while((n = Rio_readnb(&rio, buf, MAXLINE)) != 0)
 	uint32_t ni = 0;
 	fd2 = open("output.jpg", O_WRONLY | O_CREAT , 0666);
-	//while((n = read(connfd, buf, 256)) > 0)
 	do
 	{
 		n = read(connfd, buf, 256);
-		printf("%d:%d\n", i, n);
-		ni = write(fd2, buf, n/*strlen(buf)*/);
 		if(n < 0 || n == 0)
 			break;
-
+		n = write(fd2, buf, n);
 	}while(1);
-	printf("out of the while loop!\n");
 	close(fd2);
-	perror("Closed the file fd1!\n");
+	if(Fork() == 0)
+	{
+		printf("in child\n");
+		char cgiargs[MAXLINE] = {0};
+		char cgiargs2[MAXLINE] = {0};
+		getcwd(cgiargs, MAXLINE);
+		strncat(cgiargs, "/", 1);
+		strncat(cgiargs, "output.jpg", strlen("output.jpg"));
+		sprintf(cgiargs2, "%s#%s_output#CTG", cgiargs, cgiargs);
+		printf("%s\n", cgiargs2);
+		execl("/home/rishiraj/Desktop/fall17/EOS/Project/opencvExample/sample", "sample", cgiargs2, NULL);
+		exit(0);
+	}
 }
 
 int main(int argc, char *argv[])
@@ -45,10 +51,7 @@ int main(int argc, char *argv[])
 	{
 		clientlen = sizeof(clientaddr);
 		connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
-		/*fd2 = open("output.jpg", O_WRONLY | O_CREAT , 0666);
-		if(fd2 < 0)
-			perror("Error in opening output file:");*/
-		printf("output.jpg is file %d\n", fd2);
+
 		echo(connfd);
 		Close(connfd);
 	}
