@@ -26,40 +26,47 @@ int main(int argc, char **argv)
 		perror("Error in opening the input file");
 		return fd;
 	}
-	printf("Input file is : %s [FD:%d]\n", argv[3], fd);
 
-	while (1)
+	uint32_t fileSize = lseek(fd, 0, SEEK_END);
+	lseek(fd, 0, SEEK_SET);
+
+	snprintf(buf, 15, "%0d", fileSize);
+	reti = write(clientfd, buf, strlen(buf));
+	printf("Client sent %s[%d bytes]\n", buf, reti);
+	int n = 0;
+
+	/*Send file to server*/
+	while((n = read(fd, buf, 256)) > 0)
 	{
-		if(flag)
-		{
-			ret = read(fd, buf, 256);
-			if(ret < 0)
-				perror("Error reading the input file fd:");
-			if(ret == 0)
-			{
-				perror("Finished reading the input file fd:");
-				flag = 0;
-				close(fd);
-			}
-		}
-
-		reti = write(clientfd, buf, ret);
-		if(reti < 0)
-		{
-			perror("Error sending the image file fd:");
-			break;
-		}
-
-		if(reti == 0)
-		{
-			perror("Finished sending the image file fd:");
-			break;
-		}
-		usleep(100);
+		reti = write(clientfd, buf, n);
+		usleep(500);
 	}
-	//ret = read(clientfd, buf, MAXLINE);
-	//printf("Server sent : %s\n", buf);
-	sleep(5);
+	close(fd);
+
+	int fd2 = open("bw_image.jpg", O_WRONLY | O_CREAT , 0666);
+	if(fd2 < 0)
+	{
+		perror("error in creating a file");
+		exit(fd2);
+	}
+	memset(buf, 0, MAXLINE);
+
+	n = read(clientfd, buf, 15);
+	fileSize = atoi(buf);
+	printf("Client red %s[%d]\n", buf, n);
+	memset(buf, 0, MAXLINE);
+
+	/*Receive an image from Sever - B/W image*/
+	do
+	{
+		n = read(clientfd, buf, 256);
+		write(fd2, buf, n);
+		fileSize -= n;
+		printf("Remaining fileSize is %d\n", fileSize);
+	}while((n > 0) && fileSize);
+
+	printf("Received the entire image... storing it...\n");
+	close(fd2);
 	Close(clientfd);
 	exit(0);
 }
