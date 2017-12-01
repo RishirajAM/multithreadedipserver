@@ -6,9 +6,7 @@ int main(int argc, char **argv)
 	int clientfd;
 	char *host, buf[MAXLINE];
 	rio_t rio;
-	uint32_t ret = 0;
 	uint32_t reti = 0;
-	uint8_t flag = 1;
 
 	if (argc < 4)
 	{
@@ -62,7 +60,6 @@ int main(int argc, char **argv)
 		n = read(clientfd, buf, 256);
 		write(fd2, buf, n);
 		fileSize -= n;
-		printf("Remaining fileSize is %d\n", fileSize);
 	}while((n > 0) && fileSize);
 
 	printf("Received the entire image... storing it...\n");

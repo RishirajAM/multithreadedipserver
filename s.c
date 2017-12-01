@@ -2,6 +2,30 @@
 
 uint32_t fd2;
 
+void send_image(uint32_t fd, char *buf, size_t len, uint32_t toConnfd)
+{
+	uint32_t status = 0;
+	uint32_t fileSize = lseek(fd, 0, SEEK_END);
+	lseek(fd, 0, SEEK_SET);
+	do
+	{
+		fileSize -= status;
+		write(toConnfd, buf, status);
+		usleep(500);
+	}while(((status = read(fd, buf, len)) > 0) && fileSize);
+}
+
+void recv_image(uint32_t fd, char *buf, size_t len, uint32_t fromConnfd, uint32_t fileSize)
+{
+	uint32_t n = 0;
+	do
+	{
+		n = read(fromConnfd, buf, len);
+		write(fd, buf, n);
+		fileSize -= n;
+	}while((n > 0) && fileSize);
+}
+
 void echo(int connfd)
 {
 	size_t n;
@@ -15,13 +39,13 @@ void echo(int connfd)
 
 	fd2 = open("output.jpg", O_WRONLY | O_CREAT , 0666);
 	/*Receive and image from client - coloured image*/
-	do
+	/*do
 	{
 		n = read(connfd, buf, 256);
 		write(fd2, buf, n);
 		fileSize -= n;
-		printf("remaining fileSize is %d\n", fileSize);
-	}while((n > 0) && fileSize);
+	}while((n > 0) && fileSize);*/
+	recv_image(fd2, buf, n, connfd, fileSize);
 	close(fd2);
 
 	if(Fork() == 0)
@@ -33,11 +57,9 @@ void echo(int connfd)
 		strncat(cgiargs, "/", 1);
 		strncat(cgiargs, "output.jpg", strlen("output.jpg"));
 		sprintf(cgiargs2, "%s#%s_output#CTG", cgiargs, cgiargs);
-		//printf("%s\n", cgiargs2);
 		execl("/home/rishiraj/Desktop/fall17/EOS/Project/opencvExample/sample", "sample", cgiargs2, NULL);
 	}
 	int status=0;
-	int flag = 1;
     waitpid(-1, &status, 0);
     if(status == 0)
     {
@@ -56,13 +78,13 @@ void echo(int connfd)
 			printf("Server wrote: %s (%d)\n", buf, (int)strlen(buf));
 
     		/*Send a B/W image to the client*/
-    		do
+    		/*do
     		{
     			fileSize -= status;
-    			printf("remaining : %d\n", fileSize);
     			write(connfd, buf, status);
     			usleep(500);
-    		}while(((status = read(fd2, buf, 256)) > 0) && fileSize);
+    		}while(((status = read(fd2, buf, 256)) > 0) && fileSize);*/
+    		send_image(fd2, buf, 256, connfd);
     		printf("Closing the B/W image file\n");
     		close(fd2);
     	}
