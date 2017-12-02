@@ -30,11 +30,16 @@ int main(int argc, char **argv)
 	lseek(fd, 0, SEEK_SET);
 
 	/*Send file size*/
-	snprintf(buf, 15, "%0d", fileSize);
-	reti = write(clientfd, buf, strlen(buf));
+	//snprintf(buf, 15, "%0d", fileSize);
+	//reti = write(clientfd, buf, strlen(buf));
+	reti = write(clientfd, &fileSize, sizeof(fileSize));
+	//writeImageFileSize(clientfd, fileSize);
+	
 	int n = 0;
 
 	/*Send file to server*/
+	sleep(1);
+	printf("Sending the image file to the server\n");
 	send_image(fd, buf, 256, clientfd);
 	close(fd);
 
@@ -48,9 +53,12 @@ int main(int argc, char **argv)
 	memset(buf, 0, MAXLINE);
 
 	/*Read the BW image file size*/
-	n = read(clientfd, buf, 15);
-	fileSize = atoi(buf);
+	/*n = read(clientfd, buf, 10);
+	fileSize = atoi(buf);*/
+	n = read(clientfd, &fileSize, sizeof(fileSize));
+
 	memset(buf, 0, MAXLINE);
+	//fileSize = readImageFileSize(clientfd);
 
 	/*Receive an image from Sever - B/W image*/
 	recv_image(fd2, buf, 256, clientfd, fileSize);

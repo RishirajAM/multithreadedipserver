@@ -10,8 +10,11 @@ all: s c
 c: c.c csapp.o image_helper.o
 	$(CC) $(CFLAGS) -o c c.c csapp.o image_helper.o $(LIB)
 
-s: s.c csapp.o image_helper.o
-	$(CC) $(CFLAGS) -o s s.c csapp.o image_helper.o $(LIB)
+s: s.c csapp.o image_helper.o q.o
+	$(CC) $(CFLAGS) -o s s.c csapp.o image_helper.o q.o $(LIB)
+
+q.o: q.c
+	$(CC) $(CFLAGS) -c q.c
 
 csapp.o: csapp.c
 	$(CC) $(CFLAGS) -c csapp.c
