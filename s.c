@@ -2,8 +2,9 @@
 #include "image_helper.h"
 #include "q.h"
 #include <unistd.h>
+#include <sys/syscall.h>
 
-#define ACTIVE_CORES ((sysconf(_SC_NPROCESSORS_ONLN)<=1)?   \
+#define ACTIVE_CORES ((sysconf(_SC_NPROCESSORS_ONLN)==1)?   \
                      (1):                                   \
                      (sysconf(_SC_NPROCESSORS_ONLN) - 1)    )
 
@@ -13,67 +14,94 @@ queue *fifo;
 
 void echo(int connfd)
 {
-
 	size_t n = 0;
-	char buf[MAXLINE];
 	uint32_t fd2;
+	uint32_t fileSize;
+	char buf[MAXLINE];
+	char ipImage[15] = {0};
+	char opImage[15] = {0};
+	char imageTypeBuf[10] = {0};
+	enum fileType ipFileType;
 
-	//char bufFS[10] = {};
-	/*n = read(connfd, buf, 5);
-	uint32_t fileSize = atoi(buf);*/
-	uint32_t fileSize = 0;
-	n = read(connfd, &fileSize, sizeof(fileSize));
-	printf("Server red: %d(%d bytes)\n", fileSize, (int)n);
-	//uint32_t fileSize = readImageFileSize(connfd);
+	fileSize = readImageFileSize(connfd);
+	ipFileType = readImageFileType(connfd);
 
-	fd2 = open("color.jpg", O_WRONLY | O_CREAT , 0666);
+	if(ipFileType == jpg)
+		sprintf(imageTypeBuf, "jpg");
+	if(ipFileType == jpeg)
+		sprintf(imageTypeBuf, "jpeg");
+	if(ipFileType == png)
+		sprintf(imageTypeBuf, "png");
+	if(ipFileType == gif)
+		sprintf(imageTypeBuf, "gif");
+
+	sprintf(ipImage, "%05d_ip.%s", (int)syscall(__NR_gettid), imageTypeBuf);
+	sprintf(opImage, "%05d_op.%s", (int)syscall(__NR_gettid), imageTypeBuf);
+
+	fd2 = open(ipImage, /*O_WRONLY*/ O_RDWR | O_CREAT , 0666);
+	if(fd2 < 0)
+	{
+		printf("%s:%d:", __func__, __LINE__);
+		perror("Invalid input file:");
+		exit(fd2);
+	}
 
 	/*Receive an image from client - coloured image*/
-	recv_image(fd2, buf, n, connfd, fileSize);
+	recv_image(fd2, buf, 256, connfd, fileSize);
 
-	close(fd2);
+	Close(fd2);
 
 	if(Fork() == 0)
 	{
 		char cgiargs[MAXLINE] = {0};
 		char cgiargs2[MAXLINE] = {0};
-
-		getcwd(cgiargs, MAXLINE);
-		strncat(cgiargs, "/", 1);
-		strncat(cgiargs, "color.jpg", strlen("color.jpg"));
-		sprintf(cgiargs2, "%s#%s_BW#CTG", cgiargs, cgiargs);
-		execl("/home/rishiraj/Desktop/fall17/EOS/Project/opencvExample/sample", "sample", cgiargs2, NULL);
+		sprintf(cgiargs, "%s/", getcwd(NULL, MAXLINE));
+		sprintf(cgiargs, "%s%s#", cgiargs, ipImage);
+		sprintf(cgiargs, "%s%s/", cgiargs, getcwd(NULL, MAXLINE));
+		sprintf(cgiargs, "%s%s#", cgiargs, opImage);
+		sprintf(cgiargs, "%s%s", cgiargs, "CTG");
+		//execl("../opencvExample/sample", "sample", cgiargs, NULL);
+		execl("sIPA/sample", "sample", cgiargs, NULL);
 	}
-	int status=0;
+
+	int status = 0;
+	uint32_t result = 1;
     waitpid(-1, &status, 0);
     if(status == 0)
     {
+    	/*Send the conversion status to client*/
+    	result = 0;
+    	write(connfd, &result, sizeof(result));
+
     	memset(buf, 0, MAXLINE);
-    	fd2 = open("color.jpg_BW", O_RDONLY);
+    	fd2 = open(opImage, /*O_RDONLY*/O_RDWR | O_CREAT , 0666);
     	if(fd2 < 0)
     	{
-    		perror("Error opening B/W image [Quitting]:");
+    		printf("%s:%d:", __func__, __LINE__);
+			perror("Error in creating BW file:");
+    		exit(fd2);
     	}
     	else
     	{
-    		fileSize = lseek(fd2, 0, SEEK_END);
-			lseek(fd2, 0, SEEK_SET);
+    		fileSize = Lseek(fd2, 0, SEEK_END);
+			Lseek(fd2, 0, SEEK_SET);
 
 			/*Send BW output file size to the client*/
-			/*sprintf(buf, "%0d", fileSize);
-			write(connfd, buf, strlen(buf));*/
-			write(connfd, &fileSize, sizeof(fileSize));
-			//printf("Server wrote: %s (%d)\n", buf, (int)strlen(buf));
-			//writeImageFileSize(connfd, fileSize);
+			writeImageFileSize(connfd, fileSize);
 
-    		/*Send a B/W image to the client*/
+    		/*Send a BW image to the client*/
     		send_image(fd2, buf, 256, connfd);
     		printf("Closing the B/W image file\n");
-    		close(fd2);
+    		Close(fd2);
     	}
     }
     else
-    	printf("waitpid returned %d\n", status);
+    {
+    	printf("waitpid was unsuccessful:");
+    	write(connfd, &result, sizeof(result));
+    }
+    remove(opImage);
+    remove(ipImage);
 }
 
 void mSec(int mil)
@@ -85,7 +113,6 @@ void *workersHandler(void *payload)
 {
 	int d;
 	int threadNumber = (int)payload;
-	printf("Worker %d\n", threadNumber);
 	pthread_t thread_id = pthread_self();
 	struct sched_param param;
 	int priority, policy;

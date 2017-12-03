@@ -17,53 +17,79 @@ int main(int argc, char **argv)
 	host = argv[1];
 	clientfd = Open_clientfd(host, argv[2]);
 
+	char *ft = calloc(10, sizeof(char));
+	enum fileType ipImageFileType;
+	if(strstr(argv[3], ".jpg"))
+		ipImageFileType = jpg;
+	else if(strstr(argv[3], ".jpeg"))
+		ipImageFileType = jpeg;
+	else if(strstr(argv[3], ".png"))
+		ipImageFileType = png;
+	else
+		ipImageFileType = gif;
+
 	//open input image file
-	uint32_t fd = open(argv[3], O_RDONLY);
+	uint32_t fd = open(argv[3], O_RDONLY, 0666);
 	if(fd<0)
 	{
-		perror("Error in opening the input file");
-		return fd;
+		printf("%s:%d:", __func__, __LINE__);
+		perror("Error in creating input file:");
+		exit(fd);
 	}
 
 	/*Calculate input file size in bytes*/
-	uint32_t fileSize = lseek(fd, 0, SEEK_END);
-	lseek(fd, 0, SEEK_SET);
+	uint32_t fileSize = Lseek(fd, 0, SEEK_END);
+	Lseek(fd, 0, SEEK_SET);
 
 	/*Send file size*/
-	//snprintf(buf, 15, "%0d", fileSize);
-	//reti = write(clientfd, buf, strlen(buf));
-	reti = write(clientfd, &fileSize, sizeof(fileSize));
-	//writeImageFileSize(clientfd, fileSize);
-	
+	writeImageFileSize(clientfd, fileSize);
+
+	/*Send file type*/
+	writeImageFileType(clientfd, ipImageFileType);
+
 	int n = 0;
 
 	/*Send file to server*/
 	sleep(1);
 	printf("Sending the image file to the server\n");
 	send_image(fd, buf, 256, clientfd);
-	close(fd);
+	Close(fd);
 
 	/*Create an output file*/
 	int fd2 = open(argv[4], O_WRONLY | O_CREAT , 0666);
 	if(fd2 < 0)
 	{
-		perror("error in creating a file");
+		printf("%s:%d:", __func__, __LINE__);
+		perror("Error in creating output file:");
 		exit(fd2);
 	}
 	memset(buf, 0, MAXLINE);
 
-	/*Read the BW image file size*/
-	/*n = read(clientfd, buf, 10);
-	fileSize = atoi(buf);*/
-	n = read(clientfd, &fileSize, sizeof(fileSize));
+	/*Read the result of the conversion*/
+	int result = 0;
+	read(clientfd, &result, sizeof(result));
+	if(result)
+	{
+		printf("BW image conversion failed at the server side. Closing the client.\n");
+		return result;
+	}
 
-	memset(buf, 0, MAXLINE);
-	//fileSize = readImageFileSize(clientfd);
+	/*Read the BW image file size*/
+	fileSize = readImageFileSize(clientfd);
 
 	/*Receive an image from Sever - B/W image*/
 	recv_image(fd2, buf, 256, clientfd, fileSize);
-	close(fd2);
+	Close(fd2);
 	Close(clientfd);
+
+	if(Fork()==0)
+	{
+		char cgiargs[MAXLINE] = {0};
+
+		sprintf(cgiargs, "%s#%s", argv[3], argv[4]);
+		execl("cIPA/sample", "sample", cgiargs, NULL);
+	}
+
 	printf("Done.\n");
 	exit(0);
 }
