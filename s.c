@@ -38,7 +38,7 @@ void echo(int connfd)
 	sprintf(ipImage, "%05d_ip.%s", (int)syscall(__NR_gettid), imageTypeBuf);
 	sprintf(opImage, "%05d_op.%s", (int)syscall(__NR_gettid), imageTypeBuf);
 
-	fd2 = open(ipImage, /*O_WRONLY*/ O_RDWR | O_CREAT , 0666);
+	fd2 = open(ipImage, O_RDWR | O_CREAT , 0666);
 	if(fd2 < 0)
 	{
 		printf("%s:%d:", __func__, __LINE__);
@@ -60,7 +60,6 @@ void echo(int connfd)
 		sprintf(cgiargs, "%s%s/", cgiargs, getcwd(NULL, MAXLINE));
 		sprintf(cgiargs, "%s%s#", cgiargs, opImage);
 		sprintf(cgiargs, "%s%s", cgiargs, "CTG");
-		//execl("../opencvExample/sample", "sample", cgiargs, NULL);
 		execl("sIPA/sample", "sample", cgiargs, NULL);
 	}
 
@@ -220,8 +219,11 @@ int main(int argc, char *argv[])
 
 	/*Manager Thread*/
 	int ch = pthread_create(&managerThreads, &managetAttr, managerHandler, (void *)listenfd);
-	//printf("ch is %d\n", ch);
-	perror("");
+	if(ch)
+	{
+		perror("");
+		exit(ch);
+	}
 
 	while (1);
 	exit(0);
